@@ -20,7 +20,7 @@ struct Args {
 
     /// Path
     #[arg()]
-    path: String,
+    paths: Vec<String>,
 }
 
 fn main() {
@@ -36,68 +36,73 @@ fn main() {
 
     let printer: Printer = Printer::new(&args);
 
-    if !Path::new(&args.path).exists() {
-        printer.stderr(format!["{} does not exist", args.path]);
-        return;
-    }
-
-    if Path::new(&args.path).is_file() {
-        printer.verbose(format!["Deleting: {}", args.path]);
-
-        if let Err(err) = fs::remove_file(&args.path) {
-            printer.stderr(format!["Failed to delete {}: {}", args.path, err]);
+    for cur_path in args.paths.iter() {
+        if !Path::new(cur_path).exists() {
+            printer.stderr(format!["{} does not exist", cur_path]);
             errors += 1;
-        } else {
-            deleted_files += 1;
+            continue;
         }
-    } else if Path::new(&args.path).is_dir() {
-        let walk_dir: WalkDir = WalkDir::new(&args.path)
-            .contents_first(true)
-            .follow_links(false)
-            .follow_root_links(false);
 
-        for entry_res in walk_dir.into_iter() {
-            let unwrapped_entry: DirEntry = match entry_res {
-                Ok(entry) => entry,
-                Err(err) => {
-                    printer.stderr(format!["Failed to get entry: {}", err]);
-                    errors += 1;
-                    continue;
-                }
-            };
+        if Path::new(cur_path).is_file() {
+            printer.verbose(format!["Deleting: {}", cur_path]);
 
-            printer.verbose(format!["Deleting: {}", unwrapped_entry.path().display()]);
-            if unwrapped_entry.path().is_dir() {
-                if let Err(err) = fs::remove_dir(unwrapped_entry.path()) {
-                    printer.stderr(format![
-                        "Failed to delete dir {}: {}",
-                        unwrapped_entry.path().display(),
-                        err
-                    ]);
-                    errors += 1;
-                } else {
-                    deleted_directories += 1;
-                }
-            } else if unwrapped_entry.path().is_file() {
-                if let Err(err) = fs::remove_file(unwrapped_entry.path()) {
-                    printer.stderr(format![
-                        "Failed to delete file {}: {}",
-                        unwrapped_entry.path().display(),
-                        err
-                    ]);
-                    errors += 1;
-                } else {
-                    deleted_files += 1;
-                }
+            if let Err(err) = fs::remove_file(cur_path) {
+                printer.stderr(format!["Failed to delete file {}: {}", cur_path, err]);
+                errors += 1;
             } else {
-                printer.stderr(format![
-                    "Unsupported type {}",
-                    unwrapped_entry.path().display()
-                ]);
+                deleted_files += 1;
             }
+        } else if Path::new(cur_path).is_dir() {
+            let walk_dir: WalkDir = WalkDir::new(cur_path)
+                .contents_first(true)
+                .follow_links(false)
+                .follow_root_links(false);
+
+            for entry_res in walk_dir.into_iter() {
+                let unwrapped_entry: DirEntry = match entry_res {
+                    Ok(entry) => entry,
+                    Err(err) => {
+                        printer.stderr(format!["Failed to get entry: {}", err]);
+                        errors += 1;
+                        continue;
+                    }
+                };
+
+                printer.verbose(format!["Deleting: {}", unwrapped_entry.path().display()]);
+                if unwrapped_entry.path().is_dir() {
+                    if let Err(err) = fs::remove_dir(unwrapped_entry.path()) {
+                        printer.stderr(format![
+                            "Failed to delete dir {}: {}",
+                            unwrapped_entry.path().display(),
+                            err
+                        ]);
+                        errors += 1;
+                    } else {
+                        deleted_directories += 1;
+                    }
+                } else if unwrapped_entry.path().is_file() {
+                    if let Err(err) = fs::remove_file(unwrapped_entry.path()) {
+                        printer.stderr(format![
+                            "Failed to delete file {}: {}",
+                            unwrapped_entry.path().display(),
+                            err
+                        ]);
+                        errors += 1;
+                    } else {
+                        deleted_files += 1;
+                    }
+                } else {
+                    printer.stderr(format![
+                        "Unsupported type {}",
+                        unwrapped_entry.path().display()
+                    ]);
+                    errors += 1;
+                }
+            }
+        } else {
+            printer.stderr(format!["Unsupported type {}", cur_path]);
+            errors += 1;
         }
-    } else {
-        printer.stderr(format!["Unsupported type {}", &args.path]);
     }
 
     if args.verbose {
