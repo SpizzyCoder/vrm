@@ -36,6 +36,11 @@ fn main() {
 
     let printer: Printer = Printer::new(&args);
 
+    if args.paths.len() < 1 {
+        printer.stderr(format!["Must have at least one argument"]);
+        return;
+    }
+
     for cur_path in args.paths.iter() {
         if !Path::new(cur_path).exists() {
             printer.stderr(format!["{} does not exist", cur_path]);
