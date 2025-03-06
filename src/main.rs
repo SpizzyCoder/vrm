@@ -113,7 +113,16 @@ fn main() {
     if args.verbose {
         printer.stdout(format!["=========="]);
     }
-    printer.stdout(format!["Deleted files: {}", deleted_files]);
-    printer.stdout(format!["Deleted directories: {}", deleted_directories]);
-    printer.stdout(format!["Errors: {}", errors]);
+
+    if deleted_files != 0 {
+        printer.stdout(format!["Deleted files: {}", deleted_files]);
+    }
+
+    if deleted_directories != 0 {
+        printer.stdout(format!["Deleted directories: {}", deleted_directories]);
+    }
+
+    if errors != 0 {
+        printer.stdout(format!["Errors: {}", errors]);
+    }
 }
